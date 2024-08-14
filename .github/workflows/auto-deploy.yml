@@ -1,69 +1,51 @@
-# .github/workflows/auto-deploy.yml
-
-name: auto deploy 🚀
+name: src
 
 on:
-  # 监听push操作
+  # 每当 push 到 main 分支时触发部署
   push:
-    branches:
-      - master # 这里只配置了main分支，所以只有推送main分支才会触发以下任务
-  pull_request:
-
-  # 这个选项可以使你手动在 Action tab 页面触发工作流
-  # workflow_dispatch:
-
-permissions:
-  # 允许对仓库的内容进行写操作。包括创建、修改和删除文件、目录以及提交更改等
-  # 这里只配置了push，所以只有推送main分支才会触发以下任务 
-  contents: write
-  # 允许管理 GitHub Pages 服务并对其进行写操作
-  pages: write
-
+    branches: [master]
+  # 手动触发部署
+  workflow_dispatch:
 
 jobs:
-  # 任务ID
-  build-and-deploy:
-    # 运行环境
-    # runs-on: macos-latest
-    # runs-on: windows-latest
+  src:
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-    
-    # 步骤
+
     steps:
-      # 官方action，将代码拉取到虚拟机
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      # 建一个名为setup-node的步骤（安装指定版本的Node.js）
-      - name: setup-node 
-        # 使用setup-node@v3这个action
-        uses: actions/setup-node@v3
-        # 指定某个action 可能需要输入的参数
+      - uses: actions/checkout@v4
         with:
-          node-version: '20.x'
+          # “最近更新时间” 等 git 日志相关信息，需要拉取全部提交记录
+          fetch-depth: 0
 
-      # 安装 pnpm
-      - name: Install pnpm
-        run: npm install pnpm -g
-
-      # 安装依赖  
-      - name: Install dependencies
-        run: pnpm i
-      # 打包
-      - name: Build application 🔧
-        run: pnpm run build:prod
-
-      # 部署 https://github.com/JamesIves/github-pages-deploy-action
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4
-        if: github.ref == 'refs/heads/master'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages  # default: gh-pages
-          folder: dist
-          clean: true # Automatically remove deleted files from the deploy branch
-          # commit-message: ${{ github.event.head_commit.message }} # default: `Deploying to gh-pages from @ 3238feb 🚀`
-          # commit-message: "deploy: ${{ github.sha }} (${{ github.event.head_commit.message }}) 🚀 "
+          # 选择要使用的 pnpm 版本
+          version: 8
+          # 使用 pnpm 安装依赖
+          run_install: true
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # 选择要使用的 node 版本
+          node-version: 20
+          # 缓存 pnpm 依赖
+          cache: pnpm
+
+      # 运行构建脚本
+      - name: Build VuePress site
+        run: pnpm docs:build
+
+      # 查看 workflow 的文档来获取更多信息
+      # @see https://github.com/crazy-max/ghaction-github-pages
+      - name: Deploy to GitHub Pages
+        uses: crazy-max/ghaction-github-pages@v4
+        with:
+          # 部署到 gh-pages 分支
+          target_branch: gh-pages
+          # 部署目录为 VuePress 的默认输出目录
+          build_dir: src/dist
+        env:
+          # @see https://docs.github.com/cn/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
