@@ -5,7 +5,7 @@ import {resolve}  from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-   base: './',
+  base:'/Vue3project-guiguzhenxuan/',
   resolve: {
   // 设置文件./src路径为 @
    alias: {
