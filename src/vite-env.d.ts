@@ -6,3 +6,5 @@ declare module '*.vue' {
     export default component
 
 }
+// 我在vue组件中引入vue-router的useRouter函数时，报的错在vite-env.d.ts中，把找不到的模块名称声明一下就行。
+declare module "vue-router"
